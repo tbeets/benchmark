@@ -91,7 +91,7 @@
       lineinfile:
         dest: /opt/benchmark/driver-nats-core/nats.yaml
         regexp: '^natsHostUrl\: '
-        line: "natsHostUrl: nats://{{ ansible_facts['default_ipv4']['address'] }}:4222"
+        line: "natsHostUrl: nats://{{ natsClusterIp }}:4222"
     - name: Configure memory Benchmark Worker
       lineinfile:
         dest: /opt/benchmark/bin/benchmark-worker
