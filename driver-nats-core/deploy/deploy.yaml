@@ -62,6 +62,8 @@
   connection: ssh
   become: true
   tasks:
+    - set_fact:
+        natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
     - name: Install packages
       apt:
         name: openjdk-11-jre-headless
