@@ -37,7 +37,6 @@
       src: "https://github.com/nats-io/nats-server/releases/download/v2.6.6/nats-server-v2.6.6-linux-amd64.zip"
       remote_src: yes
       dest: /opt/nats
-#      extra_opts: ["--strip-components=1"]
   - template:
       src: "templates/cluster.conf"
       dest: "/opt/nats/cluster.conf"
@@ -87,7 +86,7 @@
     - template:
         src: "templates/nats.yaml"
         dest: "/opt/benchmark/driver-nats-core/nats.yaml"
-    - name: Configure natsHost URL
+    - name: Configure NATS Server Seed URL
       lineinfile:
         dest: /opt/benchmark/driver-nats-core/nats.yaml
         regexp: '^natsHostUrl\: '
