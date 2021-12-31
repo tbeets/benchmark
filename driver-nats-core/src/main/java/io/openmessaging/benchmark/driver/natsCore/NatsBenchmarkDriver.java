@@ -60,6 +60,10 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
 
     @Override public CompletableFuture<BenchmarkProducer> createProducer(String topic) {
         Connection natsProducer;
+
+        log.info("createProducer");
+        log.info("topic param: ", topic);
+
         try {
             Options options = new Options.Builder().server(config.natsHostUrl).maxReconnects(5).build();
             natsProducer = Nats.connect(options);
@@ -67,6 +71,7 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
             log.error("createProducer exception " + e);
             return null;
         }
+        log.info("createProducer done");
         return CompletableFuture.completedFuture(new NatsBenchmarkProducer(natsProducer, topic));
     }
 
@@ -75,6 +80,9 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
         Dispatcher natsConsumer;
         Connection cn;
         log.info("createConsumer");
+        log.info("topic param: ", topic);
+        log.info("subscriptionName param: ", subscriptionName);
+
         try {
             Options options = new Options.Builder().server(config.natsHostUrl).maxReconnects(5).build();
             cn = Nats.connect(options);
