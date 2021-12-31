@@ -1,10 +1,16 @@
-provider "aws" {
-  region  = "${var.region}"
-  version = "3.50"
+terraform {
+  required_providers {
+    aws    = {
+      version = "3.50"
+    }
+    random = {
+      version = "3.1"
+    }
+  }
 }
 
-provider "random" {
-  version = "3.1"
+provider "aws" {
+  region  = "${var.region}"
 }
 
 variable "public_key_path" {
@@ -134,7 +140,7 @@ resource "aws_instance" "natsclient" {
   count                  = "${var.num_instances["natsclient"]}"
 
   tags = {
-    Name = "natsclient-${count.index}"
+    Name = "natsclient_${count.index}"
   }
 }
 
