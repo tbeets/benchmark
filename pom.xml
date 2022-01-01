@@ -35,9 +35,6 @@
 
 		<module>driver-nats-core</module>
 		<module>driver-nats-jetstream</module>
-
-
-
 	</modules>
 
 

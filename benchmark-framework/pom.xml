@@ -104,13 +104,7 @@
 			<version>${project.version}</version>
 		</dependency>
 
-		<!-- The benchmark framework uses Pulsar to coordinate
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>driver-pulsar</artifactId>
-			<version>${project.version}</version>
-		</dependency>
--->
+		<!-- The benchmark framework uses Pulsar FutureEvents -->
 		<dependency>
 			<groupId>org.apache.pulsar</groupId>
 			<artifactId>pulsar-client-all</artifactId>
