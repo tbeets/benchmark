@@ -261,12 +261,7 @@ public class DistributedWorkersEnsemble implements Worker {
      * Send a request to multiple hosts and wait for all responses
      */
     private void sendPost(List<String> hosts, String path, byte[] body) {
-        log.info("sendPost to group of hosts");
-        log.info("Body:");
-        for (int i=0; i < body.length; i++) {
-            System.out.println(body[i]);
-        }
-        FutureUtil.waitForAll(hosts.stream().map(w -> sendPost(w, path, body)).collect(toList())).join();
+          FutureUtil.waitForAll(hosts.stream().map(w -> sendPost(w, path, body)).collect(toList())).join();
     }
 
     private CompletableFuture<Void> sendPost(String host, String path, byte[] body) {
