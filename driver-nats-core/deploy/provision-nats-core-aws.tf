@@ -28,7 +28,7 @@ resource "random_id" "hash" {
 }
 
 variable "key_name" {
-  default     = "nats-benchmark-key"
+  default     = "NatsBenchmarkKey"
   description = "Desired name prefix for the AWS key pair"
 }
 
@@ -49,7 +49,7 @@ resource "aws_vpc" "benchmark_vpc" {
   cidr_block = "10.0.0.0/16"
 
   tags = {
-    Name = "NATS-Benchmark-VPC-${random_id.hash.hex}"
+    Name = "NATSBenchmarkVPC_${random_id.hash.hex}"
   }
 }
 
@@ -73,7 +73,7 @@ resource "aws_subnet" "benchmark_subnet" {
 }
 
 resource "aws_security_group" "benchmark_security_group" {
-  name   = "terraform-nats-${random_id.hash.hex}"
+  name   = "TerraformNats_${random_id.hash.hex}"
   vpc_id = "${aws_vpc.benchmark_vpc.id}"
 
   # SSH access from anywhere
@@ -109,12 +109,12 @@ resource "aws_security_group" "benchmark_security_group" {
   }
 
   tags = {
-    Name = "Benchmark-Security-Group-${random_id.hash.hex}"
+    Name = "BenchmarkSecurityGroup_${random_id.hash.hex}"
   }
 }
 
 resource "aws_key_pair" "auth" {
-  key_name   = "${var.key_name}-${random_id.hash.hex}"
+  key_name   = "${var.key_name}_${random_id.hash.hex}"
   public_key = "${file(var.public_key_path)}"
 }
 
@@ -127,7 +127,7 @@ resource "aws_instance" "natsserver" {
   count                  = "${var.num_instances["natsserver"]}"
 
   tags = {
-    Name = "natsserver-${count.index}"
+    Name = "NatsServer_${count.index}"
   }
 }
 
@@ -140,7 +140,7 @@ resource "aws_instance" "natsclient" {
   count                  = "${var.num_instances["natsclient"]}"
 
   tags = {
-    Name = "natsclient_${count.index}"
+    Name = "NatsClient_${count.index}"
   }
 }
 
