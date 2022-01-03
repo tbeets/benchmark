@@ -1,6 +1,6 @@
-# NATS benchmarks
+# NATS JetStream benchmarks
 
-This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/). In order to run these benchmarks, you'll need to:
+This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/) using the [Java NATS client library](https://github.com/nats-io/nats.java). In order to run these benchmarks, you'll need to:
 
 * [Create the necessary local artifacts](#creating-local-artifacts)
 * [Stand up a NATS cluster](#creating-a-nats-cluster-on-amazon-web-services-aws-using-terraform-and-ansible) on Amazon Web Services (which includes a client host for running the benchmarks)
@@ -49,7 +49,7 @@ $ ls ~/.ssh/nats_aws*
 With SSH keys in place, you can create the necessary AWS resources using a single Terraform command:
 
 ```bash
-$ cd driver-nats-core/deploy
+$ cd driver-nats-jetstream/deploy
 $ terraform init
 $ terraform apply
 ```
@@ -100,11 +100,11 @@ Once you've successfully SSHed into the client host, you can run all [available 
 
 ```bash
 $ cd /opt/benchmark
-$ sudo bin/benchmark --drivers driver-nats-core/nats.yaml workloads/*.yaml
+$ sudo bin/benchmark --drivers driver-nats-jetstream/nats.yaml workloads/*.yaml
 ```
 
 You can also run specific workloads in the `workloads` folder. Here's an example:
 
 ```bash
-$ sudo bin/benchmark --drivers driver-nats-core/nats.yaml workloads/1-topic-16-partitions-1kb.yaml
+$ sudo bin/benchmark --drivers driver-nats-jetstream/nats.yaml workloads/1-topic-16-partitions-1kb.yaml
 ```
