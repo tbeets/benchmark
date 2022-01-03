@@ -1,6 +1,6 @@
 # NATS benchmarks
 
-This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/). In order to run these benchmarks, you'll need to:
+This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/) using the [Java NATS client library](https://github.com/nats-io/nats.java). In order to run these benchmarks, you'll need to:
 
 * [Create the necessary local artifacts](#creating-local-artifacts)
 * [Stand up a NATS cluster](#creating-a-nats-cluster-on-amazon-web-services-aws-using-terraform-and-ansible) on Amazon Web Services (which includes a client host for running the benchmarks)
