@@ -80,7 +80,7 @@ With the appropriate infrastructure in place, you can install and start the NATS
 ```bash
 $ TF_STATE=./ ansible-playbook \
   --user ubuntu \
-  --inventory `terraform-inventory` \
+  --inventory `which terraform-inventory` \
   deploy.yaml
 ```
 
