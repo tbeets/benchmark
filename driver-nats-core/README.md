@@ -100,7 +100,7 @@ Once you've successfully SSHed into the client host, you can run all [available 
 
 ```bash
 $ cd /opt/benchmark
-$ sudo bin/benchmark --drivers driver-nats-core/nats-core.yaml workloads/*.yaml
+$ sudo bin/benchmark --drivers driver-nats-core/nats.yaml workloads/*.yaml
 ```
 
 You can also run specific workloads in the `workloads` folder. Here's an example:
