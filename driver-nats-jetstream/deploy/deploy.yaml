@@ -96,22 +96,22 @@
     - name: Provision NATS worker configuration
       template:
         src: "templates/nats.yaml"
-        dest: "/opt/benchmark/driver-nats-core/nats.yaml"
+        dest: "/opt/benchmark/driver-nats-jetstream/nats.yaml"
     - name: Set NATS seed URL
       lineinfile:
-        dest: /opt/benchmark/driver-nats-core/nats.yaml
+        dest: /opt/benchmark/driver-nats-jetstream/nats.yaml
         regexp: '^natsHostUrl\: '
         line: "natsHostUrl: nats://{{ natsClusterIp }}:4222"
     - name: Configure JVM memory Benchmark Worker
       lineinfile:
         dest: /opt/benchmark/bin/benchmark-worker
         regexp: '^JVM_MEM='
-        line: 'JVM_MEM="-Xms10G -Xmx10G -XX:+UseG1GC -XX:MaxGCPauseMillis=10 -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+AggressiveOpts -XX:+DoEscapeAnalysis -XX:ParallelGCThreads=32 -XX:ConcGCThreads=32 -XX:G1NewSizePercent=50 -XX:+DisableExplicitGC -XX:-ResizePLAB -XX:+PerfDisableSharedMem -XX:+AlwaysPreTouch -XX:-UseBiasedLocking"'
+        line: 'JVM_MEM="-Xms4G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=10 -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+AggressiveOpts -XX:+DoEscapeAnalysis -XX:ParallelGCThreads=32 -XX:ConcGCThreads=32 -XX:G1NewSizePercent=50 -XX:+DisableExplicitGC -XX:-ResizePLAB -XX:+PerfDisableSharedMem -XX:+AlwaysPreTouch -XX:-UseBiasedLocking"'
     - name: Configure JVM memory Benchmark
       lineinfile:
         dest: /opt/benchmark/bin/benchmark
         regexp: '^JVM_MEM='
-        line: 'JVM_MEM="-Xmx4G"'
+        line: 'JVM_MEM="-Xmx2G"'
     - name: Install benchmark systemd service
       template:
         src: "templates/benchmark-worker.service"
