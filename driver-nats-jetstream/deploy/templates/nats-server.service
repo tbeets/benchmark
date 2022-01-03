@@ -1,9 +1,9 @@
 [Unit]
-Description=nats broker
+Description=NATS Server
 After=network.target
 
 [Service]
-ExecStart=/opt/nats/gnatsd-v1.3.0-linux-amd64/gnatsd -c /opt/nats/cluster.conf
+ExecStart=/opt/nats/nats-server-v2.6.6-linux-amd64/nats-server -c /opt/nats/cluster.conf
 WorkingDirectory=/opt/nats/
 RestartSec=1s
 Restart=on-failure

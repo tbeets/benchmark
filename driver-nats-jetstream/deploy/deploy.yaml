@@ -17,151 +17,110 @@
 # under the License.
 #
 
-- name: Add entries to /etc/hosts
-  hosts: all
+
+- name: Install NATS cluster
+  hosts: natsserver
   connection: ssh
   tasks:
-    - lineinfile:
-        dest: /etc/hosts
-        line: "{{ item.line }}"
-        state: present
-      with_items:
-        - { line: "{{ hostvars[groups['rabbitmq'][0]].private_ip }} rabbitmaster" }
-        - { line: "{{ hostvars[groups['rabbitmq'][1]].private_ip }} rabbitslave1" }
-        - { line: "{{ hostvars[groups['rabbitmq'][2]].private_ip }} rabbitslave2" }
-
-
-- name: Install RabbitMQ Cluster
-  hosts: rabbitmq
-  connection: ssh
-  tasks:
-  - set_fact:
-      erlangVersion: 19.3.6.5
-      rabbitMqVersion: 3.7.2
-  - name: Install RPM packages
-    yum: pkg={{ item }} state=latest
-    with_items:
+  - name: Get seed NATS cluster node
+    set_fact:
+      natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
+  - name: Install utility packages
+    apt:
+      pkg:
       - wget
-      - java
-      - sysstat
-      - vim
-      - socat
-  - name: Install Erlang
-    yum:
-      name: https://github.com/rabbitmq/erlang-rpm/releases/download/v{{ erlangVersion }}/erlang-{{ erlangVersion }}-1.el7.centos.x86_64.rpm
-      state: present
-  - name: Install Rabbitmq Server
-    yum:
-      name: https://dl.bintray.com/rabbitmq/all/rabbitmq-server/{{ rabbitMqVersion }}/rabbitmq-server-{{ rabbitMqVersion }}-1.el7.noarch.rpm
-      state: present
-
-  - name: Change master hostname to rabbitmaster
-    hostname:
-      name: "rabbitmaster"
-    when: rabbitmq_master is defined
-
-  - name: Change slave1 hostname to rabbitslave1
-    hostname:
-      name: "rabbitslave1"
-    when: rabbitslave1 is defined
-
-  - name: Change slave2 hostname to rabbitslave2
-    hostname:
-      name: "rabbitslave2"
-    when: rabbitslave2 is defined
-
-  # - name: stop rabbitmq
-  #   shell: rabbitmqctl stop_app
-  # - name: kill rabbitmq
-  #   shell: rabbitmqctl stop ; ps aux | grep rabbitmq | grep -v grep | awk '{print $2}'| xargs kill -9
-  # - name: reset rabbitmq
-  #   shell: rabbitmqctl reset
-
-  - systemd:
+      - unzip
+      update_cache: yes
+  - name: Remove existing server install (if present)
+    file: path=/opt/nats state=absent
+  - name: Create /opt/nats
+    file: path=/opt/nats state=directory
+  - name: Install NATS server from tarball
+    unarchive:
+      src: "https://github.com/nats-io/nats-server/releases/download/v2.6.6/nats-server-v2.6.6-linux-amd64.zip"
+      remote_src: yes
+      dest: /opt/nats
+  - name: Provision NATS server configuration
+    template:
+      src: "templates/cluster.conf"
+      dest: "/opt/nats/cluster.conf"
+  - name: Provision systemd service configuration
+    template:
+      src: "templates/nats-server.service"
+      dest: "/etc/systemd/system/nats-server.service"
+  - name: Set seed NATS cluster node
+    replace:
+      dest: /opt/nats/cluster.conf
+      regexp: 'natsClusterIp'
+      replace: "{{ natsClusterIp }}"
+  - name: Set the NATS server listen address
+    replace:
+      dest: /opt/nats/cluster.conf
+      regexp: 'localhost'
+      replace: "{{ ansible_facts['default_ipv4']['address'] }}"
+  - name: Start the NATS server (systemd)
+    systemd:
       state: started
       daemon_reload: yes
-      name: "rabbitmq-server"
-  - name: Install web management
-    shell: rabbitmq-plugins enable rabbitmq_management
-  - systemd:
-      state: restarted
-      daemon_reload: yes
-      name: "rabbitmq-server"
-  - name: create admin/admin  profile
-    shell:  rabbitmqctl add_user admin  admin
-  - name: set admin tag
-    shell: rabbitmqctl set_user_tags admin administrator
-  - name: set admin permission
-    shell: rabbitmqctl set_permissions -p "/" admin ".*" ".*" ".*"
-  - name: Clear servers' Erlang cookie
-    file:
-      path: /var/lib/rabbitmq/.erlang.cookie
-      state: absent
-  - name: Copy Erlang cookie
-    copy: src=erlang.cookie  dest=/var/lib/rabbitmq/.erlang.cookie  owner=rabbitmq group=rabbitmq mode=0400
-  - systemd:
-      state: restarted
-      daemon_reload: yes
-      name: "rabbitmq-server"
-  - name: RabbitMQ status
-    shell: rabbitmqctl cluster_status
-    register: result
-  - debug:
-      msg: '{{ result.stdout }}'
-  - name: Rabbit cluster stop slaves
-    shell: rabbitmqctl stop_app
-    when: rabbitmq_slave is defined
-  - name: Rabbit cluster slaves join master
-    shell: rabbitmqctl join_cluster rabbit@rabbitmaster
-    when: rabbitmq_slave is defined
-  - name: Start RabbitMQ cluster slaves
-    shell: rabbitmqctl start_app
-    when: rabbitmq_slave is defined
-  - name: Show RabbitMQ cluster status
-    shell: rabbitmqctl cluster_status
-  - name: Create high availability pllicy
-    shell: rabbitmqctl set_policy ha-all "^" '{"ha-mode":"exactly","ha-params":2,"ha-sync-mode":"automatic"}'
-    when: rabbitmq_master is defined
-  # - name: add queue taxCodeInvoiceQueue
-  #   rabbitmq_queue: name=cmcc_zzs_taxCodeInvoiceQueue
-  #   when: rabbitmq_master is defined
-  # - name: add queue cmcc_zzs_generatorInvoiceQueue
-  #   rabbitmq_queue: name=cmcc_zzs_generatorInvoiceQueue
-  #   when: rabbitmq_master is defined
-  # - name: add queue cmcc_zzs_pushInvoiceQueue
-  #   rabbitmq_queue: name=cmcc_zzs_pushInvoiceQueue
-  #   when: rabbitmq_master is defined
-  # - name: add queue cmcc_zzs_sentToPlatformServerQueue
-  #   rabbitmq_queue: cmcc_zzs_sentToPlatformServerQueue
-  #   when: rabbitmq_master is defined
-  - name: Show queue list
-    shell: rabbitmqctl list_queues
-    register: result_queue
-  - debug: msg='{{result_queue.stdout}}'
-  
-  
-- name: Rabbitmq benchmarking client setup
-  hosts: client
+      name: "nats-server"
+
+
+- name:  benchmarking client setup
+  hosts: natsclient
   connection: ssh
   become: true
   tasks:
-    - name: Copy benchmark code
+    - name: Set the seed NATS server
+      set_fact:
+        natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
+    - name: Install java
+      apt:
+        name: openjdk-11-jre-headless
+        state: latest
+        install_recommends: no
+        update_cache: yes
+    - name: Copy benchmark tarball
       unarchive:
         src: ../../package/target/openmessaging-benchmark-0.0.1-SNAPSHOT-bin.tar.gz
         dest: /opt
-    - shell: >
-        tuned-adm profile latency-performance &&
-        mv /opt/openmessaging-benchmark-0.0.1-SNAPSHOT /opt/benchmark
-    - name: Configure service URL
+    - name: Remove any existing benchmark directory
+      ansible.builtin.file:
+        path: /opt/benchmark
+        state: absent
+    - name: Install benchmark
+      shell: mv /opt/openmessaging-benchmark-0.0.1-SNAPSHOT /opt/benchmark
+    - name: Provision worker list
+      template:
+        src: "templates/workers.yaml"
+        dest: "/opt/benchmark/workers.yaml"
+    - name: Provision NATS worker configuration
+      template:
+        src: "templates/nats.yaml"
+        dest: "/opt/benchmark/driver-nats-core/nats.yaml"
+    - name: Set NATS seed URL
       lineinfile:
-        dest: /opt/benchmark/driver-rabbitmq/rabbitmq.yaml
-        regexp: '^brokerAddress\: '
-        line: 'brokerAddress: rabbitmaster'
-    - name: Configure benchmark JVM settings
+        dest: /opt/benchmark/driver-nats-core/nats.yaml
+        regexp: '^natsHostUrl\: '
+        line: "natsHostUrl: nats://{{ natsClusterIp }}:4222"
+    - name: Configure JVM memory Benchmark Worker
       lineinfile:
-         dest: /opt/benchmark/bin/benchmark
-         regexp: '^JVM_MEM='
-         line: 'JVM_MEM="-Xms24G -Xmx24G -XX:+UseG1GC -XX:MaxGCPauseMillis=10 -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+AggressiveOpts -XX:+DoEscapeAnalysis -XX:ParallelGCThreads=32 -XX:ConcGCThreads=32 -XX:G1NewSizePercent=50 -XX:+DisableExplicitGC -XX:-ResizePLAB -XX:+PerfDisableSharedMem -XX:+AlwaysPreTouch -XX:-UseBiasedLocking"'
+        dest: /opt/benchmark/bin/benchmark-worker
+        regexp: '^JVM_MEM='
+        line: 'JVM_MEM="-Xms10G -Xmx10G -XX:+UseG1GC -XX:MaxGCPauseMillis=10 -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+AggressiveOpts -XX:+DoEscapeAnalysis -XX:ParallelGCThreads=32 -XX:ConcGCThreads=32 -XX:G1NewSizePercent=50 -XX:+DisableExplicitGC -XX:-ResizePLAB -XX:+PerfDisableSharedMem -XX:+AlwaysPreTouch -XX:-UseBiasedLocking"'
+    - name: Configure JVM memory Benchmark
+      lineinfile:
+        dest: /opt/benchmark/bin/benchmark
+        regexp: '^JVM_MEM='
+        line: 'JVM_MEM="-Xmx4G"'
+    - name: Install benchmark systemd service
+      template:
+        src: "templates/benchmark-worker.service"
+        dest: "/etc/systemd/system/benchmark-worker.service"
+    - name: Start the benchmark worker (systemd)
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        name: "benchmark-worker"
 
 
 - name: List host addresses
@@ -169,9 +128,9 @@
   become: false
   tasks:
     - debug:
-        msg: "RabbitMQ brokers {{ item }}"
-      with_items: "{{ groups['rabbitmq'] }}"
+        msg: "nats servers {{ item }}"
+      with_items: "{{ groups['natsserver'] }}"
     - debug:
         msg: "Benchmark client {{ item }}"
-      with_items: "{{ groups['client'] }}"
+      with_items: "{{ groups['natsclient'] }}"
   

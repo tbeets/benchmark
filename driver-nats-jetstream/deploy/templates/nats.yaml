@@ -19,9 +19,9 @@
 
 
 name: Nats
-driverClass: io.openmessaging.benchmark.driver.nats.NatsBenchmarkDriver
+driverClass: io.openmessaging.benchmark.driver.natsCore.NatsBenchmarkDriver
 
-# RabbitMq client specific configurations
+# NATS specific configurations
 
 workers:
 {% for worker in groups['natsserver'] %}
