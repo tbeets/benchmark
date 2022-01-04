@@ -65,8 +65,7 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
         log.info("topic param: ", topic);
 
         try {
-            Options options = new Options.Builder().server(config.natsHostUrl).maxReconnects(5).build();
-            natsProducer = Nats.connect(options);
+            natsProducer = Nats.connect(normalizedOptions());
         } catch (Exception e) {
             log.error("createProducer exception " + e);
             return null;
@@ -80,12 +79,11 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
         Dispatcher natsConsumer;
         Connection cn;
         log.info("createConsumer");
-        log.info("topic param: ", topic);
-        log.info("subscriptionName param: ", subscriptionName);
+        log.info("topic param: [%s]", topic);
+        log.info("subscriptionName param: [%s]", subscriptionName);
 
         try {
-            Options options = new Options.Builder().server(config.natsHostUrl).maxReconnects(5).build();
-            cn = Nats.connect(options);
+            cn = Nats.connect(normalizedOptions());
             natsConsumer = cn.createDispatcher((msg) -> {
                 consumerCallback.messageReceived(msg.getData(), Long.parseLong(msg.getReplyTo()));
             });
@@ -101,6 +99,17 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
 
     @Override public void close() throws Exception {
 
+    }
+
+    private Options normalizedOptions() {
+        Options.Builder builder = new Options.Builder();
+        builder.maxReconnects(5);
+        for(int i=0; i < config.workers.length; i++) {
+            log.info("Server seeds:");
+            log.info(config.workers[i]);
+            builder.server(config.workers[i]);
+        }
+        return builder.build();
     }
 
     private static final Logger log = LoggerFactory.getLogger(NatsBenchmarkDriver.class);
