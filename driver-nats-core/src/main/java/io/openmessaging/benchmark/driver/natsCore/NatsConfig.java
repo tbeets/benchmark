@@ -19,5 +19,6 @@
 package io.openmessaging.benchmark.driver.natsCore;
 
 public class NatsConfig {
+    public String[] workers;
     public String natsHostUrl;
 }
