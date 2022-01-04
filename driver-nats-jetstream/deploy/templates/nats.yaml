@@ -19,7 +19,7 @@
 
 
 name: Nats
-driverClass: io.openmessaging.benchmark.driver.natsCore.NatsBenchmarkDriver
+driverClass: io.openmessaging.benchmark.driver.natsJetStream.NatsBenchmarkDriver
 
 # NATS specific configurations
 
@@ -27,5 +27,7 @@ workers:
 {% for worker in groups['natsserver'] %}
   - nats://{{ hostvars[worker].private_ip }}:4222
 {% endfor %}
+
+# Add some parms and values here to pick up in code
 
 natsHostUrl: nats://localhost:4222
