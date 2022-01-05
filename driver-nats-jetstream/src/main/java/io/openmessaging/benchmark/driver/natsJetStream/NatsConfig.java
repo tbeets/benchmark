@@ -21,4 +21,5 @@ package io.openmessaging.benchmark.driver.natsJetStream;
 public class NatsConfig {
     public String[] workers;
     public String natsHostUrl;
+    public int jsReplicas;
 }
