@@ -101,13 +101,21 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
 
     }
 
+    private String patchUserPass(String baseUrl) {
+        // monkey patch this for a benchmark
+
+        // assumes nats://
+        int index = 7;
+        String pre = baseUrl.substring(0,index);
+        String post = baseUrl.substring(index);
+        return pre + "UserA:s3cr3t@" + post;
+    }
+
     private Options normalizedOptions() {
         Options.Builder builder = new Options.Builder();
         builder.maxReconnects(5);
         for(int i=0; i < config.workers.length; i++) {
-            log.info("Server seeds:");
-            log.info(config.workers[i]);
-            builder.server(config.workers[i]);
+            builder.server(patchUserPass(config.workers[i]));
         }
         return builder.build();
     }
