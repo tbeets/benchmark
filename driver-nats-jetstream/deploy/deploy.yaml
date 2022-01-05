@@ -21,48 +21,71 @@
 - name: Install NATS cluster
   hosts: natsserver
   connection: ssh
+  vars:
+    mount_src: /dev/nvme0n1
+    mount_path: /state
   tasks:
-  - name: Get seed NATS cluster node
-    set_fact:
-      natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
-  - name: Install utility packages
-    apt:
-      pkg:
-      - wget
-      - unzip
-      update_cache: yes
-  - name: Remove existing server install (if present)
-    file: path=/opt/nats state=absent
-  - name: Create /opt/nats
-    file: path=/opt/nats state=directory
-  - name: Install NATS server from tarball
-    unarchive:
-      src: "https://github.com/nats-io/nats-server/releases/download/v2.6.6/nats-server-v2.6.6-linux-amd64.zip"
-      remote_src: yes
-      dest: /opt/nats
-  - name: Provision NATS server configuration
-    template:
-      src: "templates/cluster.conf"
-      dest: "/opt/nats/cluster.conf"
-  - name: Provision systemd service configuration
-    template:
-      src: "templates/nats-server.service"
-      dest: "/etc/systemd/system/nats-server.service"
-  - name: Set seed NATS cluster node
-    replace:
-      dest: /opt/nats/cluster.conf
-      regexp: 'natsClusterIp'
-      replace: "{{ natsClusterIp }}"
-  - name: Set the NATS server listen address
-    replace:
-      dest: /opt/nats/cluster.conf
-      regexp: 'localhost'
-      replace: "{{ ansible_facts['default_ipv4']['address'] }}"
-  - name: Start the NATS server (systemd)
-    systemd:
-      state: started
-      daemon_reload: yes
-      name: "nats-server"
+    - name: Create list of mounted devices
+      set_fact:
+        mounted_devices: "{{ ansible_mounts|json_query('[].device') }}"
+    - name: Create JetStream File System
+      filesystem:
+        fstype: ext4
+        dev: "{{ mount_src }}"
+      when: mount_src not in mounted_devices
+    - name: Mount JetStream File System
+      mount:
+        path: "{{ mount_path }}"
+        src: "{{ mount_src }}"
+        fstype: ext4
+        state: mounted
+      when: mount_src not in mounted_devices
+    - name: Get seed NATS cluster node
+      set_fact:
+        natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
+    - name: Install utility packages
+      apt:
+        pkg:
+        - wget
+        - unzip
+        update_cache: yes
+    - name: Remove existing server install (if present)
+      file: path=/opt/nats state=absent
+    - name: Create /opt/nats
+      file: path=/opt/nats state=directory
+    - name: Install NATS server from tarball
+      unarchive:
+        src: "https://github.com/nats-io/nats-server/releases/download/v2.6.6/nats-server-v2.6.6-linux-amd64.zip"
+        remote_src: yes
+        dest: /opt/nats
+    - name: Provision NATS server configuration
+      template:
+        src: "templates/cluster.conf"
+        dest: "/opt/nats/cluster.conf"
+    - name: Provision systemd service configuration
+      template:
+        src: "templates/nats-server.service"
+        dest: "/etc/systemd/system/nats-server.service"
+    - name: Set seed NATS cluster node
+      replace:
+        dest: /opt/nats/cluster.conf
+        regexp: 'natsClusterIp'
+        replace: "{{ natsClusterIp }}"
+    - name: Set the NATS server listen address
+      replace:
+        dest: /opt/nats/cluster.conf
+        regexp: 'localhost'
+        replace: "{{ ansible_facts['default_ipv4']['address'] }}"
+    - name: Set the NATS server unique name
+      replace:
+        dest: /opt/nats/cluster.conf
+        regexp: 'uniquepart'
+        replace: "{{ ansible_facts['default_ipv4']['address'] | replace('.','-') }}"
+    - name: Start the NATS server (systemd)
+      systemd:
+        state: started
+        daemon_reload: yes
+        name: "nats-server"
 
 
 - name:  benchmarking client setup
