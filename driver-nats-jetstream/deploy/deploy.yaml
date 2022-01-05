@@ -21,25 +21,24 @@
 - name: Install NATS cluster
   hosts: natsserver
   connection: ssh
-  vars:
-    mount_src: /dev/nvme0n1
-    mount_path: /state
+  vars_files:
+    - natsoptions.yaml
   tasks:
     - name: Create list of mounted devices
       set_fact:
         mounted_devices: "{{ ansible_mounts|json_query('[].device') }}"
     - name: Create JetStream File System
       filesystem:
-        fstype: ext4
-        dev: "{{ mount_src }}"
-      when: mount_src not in mounted_devices
+        fstype: "{{ statefstype }}"
+        dev: "{{ statemountsrc }}"
+      when: statemountsrc not in mounted_devices
     - name: Mount JetStream File System
       mount:
-        path: "{{ mount_path }}"
-        src: "{{ mount_src }}"
-        fstype: ext4
+        path: "{{ statemountpath }}"
+        src: "{{ statemountsrc }}"
+        fstype: "{{ statefstype }}"
         state: mounted
-      when: mount_src not in mounted_devices
+      when: statemountsrc not in mounted_devices
     - name: Get seed NATS cluster node
       set_fact:
         natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
@@ -55,7 +54,7 @@
       file: path=/opt/nats state=directory
     - name: Install NATS server from tarball
       unarchive:
-        src: "https://github.com/nats-io/nats-server/releases/download/v2.6.6/nats-server-v2.6.6-linux-amd64.zip"
+        src: "{{ archiveurl }}"
         remote_src: yes
         dest: /opt/nats
     - name: Provision NATS server configuration
@@ -81,6 +80,21 @@
         dest: /opt/nats/cluster.conf
         regexp: 'uniquepart'
         replace: "{{ ansible_facts['default_ipv4']['address'] | replace('.','-') }}"
+    - name: Set the JS path
+      replace:
+        dest: /opt/nats/cluster.conf
+        regexp: 'jsstoredirplaceholder'
+        replace: "{{ statemountpath }}"
+    - name: Set the JS max memory storage
+      replace:
+        dest: /opt/nats/cluster.conf
+        regexp: 'jsmaxmemorystoreplaceholder'
+        replace: "{{ maxmemorystore }}"
+    - name: Set the JS max file storage
+      replace:
+        dest: /opt/nats/cluster.conf
+        regexp: 'jsmaxfilestoreplaceholder'
+        replace: "{{ maxfilestore }}"
     - name: Start the NATS server (systemd)
       systemd:
         state: started
@@ -92,6 +106,8 @@
   hosts: natsclient
   connection: ssh
   become: true
+  vars_files:
+    - natsoptions.yaml
   tasks:
     - name: Set the seed NATS server
       set_fact:
@@ -125,6 +141,11 @@
         dest: /opt/benchmark/driver-nats-jetstream/nats.yaml
         regexp: '^natsHostUrl\: '
         line: "natsHostUrl: nats://{{ natsClusterIp }}:4222"
+    - name: Set JS Replicas
+      lineinfile:
+        dest: /opt/benchmark/driver-nats-jetstream/nats.yaml
+        regexp: '^jsReplicas\: '
+        line: "jsReplicas: {{ jsreplicas }}"
     - name: Configure JVM memory Benchmark Worker
       lineinfile:
         dest: /opt/benchmark/bin/benchmark-worker
