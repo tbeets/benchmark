@@ -31,3 +31,5 @@ workers:
 # Add some parms and values here to pick up in code
 
 natsHostUrl: nats://localhost:4222
+
+jsReplicas: 42
