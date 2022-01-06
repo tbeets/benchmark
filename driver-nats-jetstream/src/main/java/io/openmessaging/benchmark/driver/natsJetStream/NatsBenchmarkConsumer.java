@@ -22,6 +22,8 @@ import io.nats.client.Connection;
 import io.nats.client.JetStream;
 import io.openmessaging.benchmark.driver.BenchmarkConsumer;
 
+import java.time.Duration;
+
 public class NatsBenchmarkConsumer implements BenchmarkConsumer {
     // the con has-a dispatcher, the dispatcher has-a subscription
     private Connection con;
@@ -33,6 +35,7 @@ public class NatsBenchmarkConsumer implements BenchmarkConsumer {
     }
 
     @Override public void close() throws Exception {
+        con.drain(Duration.ofSeconds(10));
         con.close();
     }
 }

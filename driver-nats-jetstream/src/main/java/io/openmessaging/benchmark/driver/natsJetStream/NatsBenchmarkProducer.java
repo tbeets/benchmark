@@ -26,6 +26,7 @@ import io.nats.client.impl.Headers;
 import io.nats.client.impl.NatsMessage;
 import io.openmessaging.benchmark.driver.BenchmarkProducer;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
@@ -83,6 +84,7 @@ public class NatsBenchmarkProducer implements BenchmarkProducer {
 
     @Override public void close() throws Exception {
         log.info("close a producer");
+        con.flush(Duration.ofSeconds(10));
         con.close();
     }
     private static final Logger log = LoggerFactory.getLogger(NatsBenchmarkProducer.class);
