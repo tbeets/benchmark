@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import io.nats.client.*;
@@ -72,6 +71,8 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
                     .replicas(config.jsReplicas)
                     .build();
             jsm.addStream(streamConfig);
+
+            con.flush(Duration.ZERO);
 
         } catch (Exception e) {
             log.error("createTopic exception " + e);
@@ -168,6 +169,7 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
     private Options normalizedOptions() {
         Options.Builder builder = new Options.Builder();
         builder.maxReconnects(5);
+        builder.errorListener(new NatsBenchmarkErrorListener());
         for(int i=0; i < config.workers.length; i++) {
             builder.server(patchUserPass(config.workers[i]));
         }
