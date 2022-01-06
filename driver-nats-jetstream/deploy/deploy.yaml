@@ -39,6 +39,11 @@
         fstype: "{{ statefstype }}"
         state: mounted
       when: statemountsrc not in mounted_devices
+    - name: Purge existing JetStream state (if any)
+      file:
+        state: absent
+        path: /state/jetstream
+      when: purgepreviousstate == "true"
     - name: Get seed NATS cluster node
       set_fact:
         natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"

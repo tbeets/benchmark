@@ -31,12 +31,17 @@ statemounted: true
 
 statemountsrc: /dev/nvme0n1
 statefstype: ext4
+
+# 2GB
 maxmemorystore: 2147483648
-maxfilestore: 472446402560
+
+# 410GB
+maxfilestore: 440234147840
 
 # JetStream replication
 # Must be strictly <= num_instances for natsserver (terraform.tfvars)
 jsreplicas: 2
 
-
+# Remove any state in /state if true
+purgepreviousstate: true
 
