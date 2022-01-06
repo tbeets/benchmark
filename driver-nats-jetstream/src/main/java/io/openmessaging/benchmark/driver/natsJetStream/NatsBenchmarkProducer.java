@@ -18,59 +18,72 @@
  */
 package io.openmessaging.benchmark.driver.natsJetStream;
 
-import io.nats.client.ConnectionListener;
+import io.nats.client.JetStream;
+import io.nats.client.Connection;
+
+import io.nats.client.Message;
+import io.nats.client.impl.Headers;
+import io.nats.client.impl.NatsMessage;
 import io.openmessaging.benchmark.driver.BenchmarkProducer;
-import java.time.Duration;
+
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import io.nats.client.Connection;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import javax.sql.ConnectionEventListener;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NatsBenchmarkProducer implements BenchmarkProducer {
-    private final String topic;
-    private final Connection natsProducer;
-    private final ExecutorService executor = Executors.newCachedThreadPool();
-    private final Semaphore semaphore = new Semaphore(1000);
+    private String sub;
+    private Connection con;
+    private JetStream js;
 
-    public NatsBenchmarkProducer(final Connection natsProducer, final String topic) {
-        this.natsProducer = natsProducer;
-        this.topic = topic;
+    private Semaphore semaphore = new Semaphore(1000);
+
+    public NatsBenchmarkProducer(Connection con, String sub, JetStream js) {
+        this.con = con;
+        this.sub = sub;
+        this.js = js;
     }
 
     @Override public CompletableFuture<Void> sendAsync(Optional<String> key, byte[] payload) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
+
+        // The benchmark wants a CompletableFuture<Void>, but NATS JS async idiom is CompletableFuture<PublishAck>
+
+        CompletableFuture<Void> voidFuture = new CompletableFuture<Void>();
+
+        Headers hs = new Headers();
+        hs.add("pubstamp", Long.toString(System.currentTimeMillis()));
+
+        Message msg = NatsMessage.builder()
+                .subject(sub)
+                .headers(hs)
+                .data(payload)
+                .build();
+
         try {
             semaphore.acquire();
 
-            executor.submit(() -> {
-                try {
-                    natsProducer.publish(topic, Long.toString(System.currentTimeMillis()), payload);
-//                    natsProducer.flush(Duration.ofSeconds(1));
-                } catch (Exception e) {
-                    log.error("send exception" + e);
-                    future.exceptionally(null);
-                } finally {
-                    semaphore.release();
-                }
-                future.complete(null);
+            // Try to redefine voidFuture as chain from completed (or exceptionally) CompletableFuture<PublishAck>
+            voidFuture = js.publishAsync(msg)
+                    .thenAccept(pa -> {
+                        pa.getSeqno();
+                        // An exception should result and bubble to voidFuture if PublishAck not result
+                    });
 
-            });
         } catch (Exception e) {
-            log.error("send exception", e);
-            future.exceptionally(null);
+            log.error("send exception" + e);
+            voidFuture.exceptionally(null);
+        } finally {
             semaphore.release();
         }
-        return future;
+
+        return voidFuture;
     }
 
     @Override public void close() throws Exception {
         log.info("close a producer");
-        natsProducer.close();
+        con.close();
     }
     private static final Logger log = LoggerFactory.getLogger(NatsBenchmarkProducer.class);
 }

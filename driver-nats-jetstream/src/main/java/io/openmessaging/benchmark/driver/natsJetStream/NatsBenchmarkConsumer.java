@@ -19,14 +19,20 @@
 package io.openmessaging.benchmark.driver.natsJetStream;
 
 import io.nats.client.Connection;
+import io.nats.client.JetStream;
 import io.openmessaging.benchmark.driver.BenchmarkConsumer;
 
 public class NatsBenchmarkConsumer implements BenchmarkConsumer {
-    private Connection cn;
-    public NatsBenchmarkConsumer (Connection cn) {
-        this.cn = cn;
+    // the con has-a dispatcher, the dispatcher has-a subscription
+    private Connection con;
+    private JetStream js;
+
+    public NatsBenchmarkConsumer (Connection con, JetStream js) {
+        this.con = con;
+        this.js = js;
     }
+
     @Override public void close() throws Exception {
-        this.cn.close();
+        con.close();
     }
 }

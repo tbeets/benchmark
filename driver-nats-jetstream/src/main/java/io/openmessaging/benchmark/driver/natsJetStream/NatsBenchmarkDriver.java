@@ -21,23 +21,27 @@ package io.openmessaging.benchmark.driver.natsJetStream;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.nats.client.Dispatcher;
-import io.nats.client.Nats;
-import io.nats.client.Options;
+
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+
+import io.nats.client.*;
+import io.nats.client.api.*;
+
 import io.openmessaging.benchmark.driver.BenchmarkConsumer;
 import io.openmessaging.benchmark.driver.BenchmarkDriver;
 import io.openmessaging.benchmark.driver.BenchmarkProducer;
 import io.openmessaging.benchmark.driver.ConsumerCallback;
+
 import java.io.File;
 import java.io.IOException;
+
 import java.util.concurrent.CompletableFuture;
+
 import org.apache.bookkeeper.stats.StatsLogger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.nats.client.Connection;
-
 
 public class NatsBenchmarkDriver implements BenchmarkDriver {
     private NatsConfig config;
@@ -50,60 +54,110 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
         return "Nats-benchmark";
     }
 
-    @Override public CompletableFuture<Void> createTopic(String topic, int partitions) {
-        log.info("nats create a topic" + topic);
+    @Override public CompletableFuture<Void> createTopic(String sub, int partitions) {
+        log.info("nats create a topic" + sub);
         log.info("ignore partitions");
+
+        Connection con;
+        JetStreamManagement jsm;
+
+        try {
+            con = Nats.connect(normalizedOptions());
+            jsm = con.jetStreamManagement();
+
+            StreamConfiguration streamConfig = StreamConfiguration.builder()
+                    .name("Str-" + sub)
+                    .subjects(sub)
+                    .storageType(StorageType.File)
+                    .replicas(config.jsReplicas)
+                    .build();
+            jsm.addStream(streamConfig);
+
+        } catch (Exception e) {
+            log.error("createTopic exception " + e);
+            return null;
+        }
+
+        try {
+            ConsumerConfiguration cc = ConsumerConfiguration.builder()
+                    .durable("Con-" + sub)
+                    .deliverSubject("push." + sub)
+                    .build();
+            jsm.addOrUpdateConsumer("Str-" + sub, cc);
+        } catch (Exception e) {
+            log.error("create JS consumer error" + e);
+            return null;
+        }
+
         CompletableFuture<Void> future = new CompletableFuture<>();
         future.complete(null);
         return future;
     }
 
-    @Override public CompletableFuture<BenchmarkProducer> createProducer(String topic) {
-        Connection natsProducer;
+    @Override public CompletableFuture<BenchmarkProducer> createProducer(String sub) {
+        Connection con;
+        JetStream js;
 
         log.info("createProducer");
-        log.info("topic param: ", topic);
+        log.info("topic param: " + sub);
 
         try {
-            natsProducer = Nats.connect(normalizedOptions());
+            con = Nats.connect(normalizedOptions());
+            js = con.jetStream();
         } catch (Exception e) {
             log.error("createProducer exception " + e);
             return null;
         }
         log.info("createProducer done");
-        return CompletableFuture.completedFuture(new NatsBenchmarkProducer(natsProducer, topic));
+        return CompletableFuture.completedFuture(new NatsBenchmarkProducer(con, sub, js));
     }
 
-    @Override public CompletableFuture<BenchmarkConsumer> createConsumer(String topic, String subscriptionName,
+    @Override public CompletableFuture<BenchmarkConsumer> createConsumer(String sub, String subscriptionName,
         ConsumerCallback consumerCallback) {
-        Dispatcher natsConsumer;
-        Connection cn;
+
+        Connection con;
+        JetStream js;
+        Dispatcher conDispatcher;
+
         log.info("createConsumer");
-        log.info("topic param: [%s]", topic);
-        log.info("subscriptionName param: [%s]", subscriptionName);
+        log.info("topic param: " + sub);
+        log.info("subscriptionName param: " + subscriptionName);
 
         try {
-            cn = Nats.connect(normalizedOptions());
-            natsConsumer = cn.createDispatcher((msg) -> {
-                consumerCallback.messageReceived(msg.getData(), Long.parseLong(msg.getReplyTo()));
-            });
-            natsConsumer.subscribe(topic, subscriptionName);
-            cn.flush(Duration.ZERO);
+            con = Nats.connect(normalizedOptions());
+            js = con.jetStream();
+
+            conDispatcher = con.createDispatcher();
+
+            MessageHandler mh = msg -> {
+                msg.ack();
+                consumerCallback.messageReceived(msg.getData(),
+                        Long.parseLong(msg.getHeaders().getFirst("pubstamp")));
+            };
+
+            PushSubscribeOptions so = PushSubscribeOptions.builder()
+                    .stream("Str-" + sub)
+                    .durable("Con-" + sub)
+                    .build();
+
+            // AutoAck false
+            js.subscribe(sub, conDispatcher, mh, false, so);
+
+            con.flush(Duration.ZERO);
         } catch (Exception e) {
             log.error("createConsumer exception " + e);
             return null;
         }
         log.info("createConsumer done");
-        return CompletableFuture.completedFuture(new NatsBenchmarkConsumer(cn));
+        return CompletableFuture.completedFuture(new NatsBenchmarkConsumer(con, js));
     }
 
     @Override public void close() throws Exception {
-
+        // TODO: Cleanup file-based JetStreams and JS Consumers
     }
 
     private String patchUserPass(String baseUrl) {
         // monkey patch this for a benchmark
-
         // assumes nats://
         int index = 7;
         String pre = baseUrl.substring(0,index);
