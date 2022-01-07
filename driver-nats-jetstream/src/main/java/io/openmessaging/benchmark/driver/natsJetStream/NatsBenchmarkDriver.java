@@ -83,6 +83,7 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
             ConsumerConfiguration cc = ConsumerConfiguration.builder()
                     .durable("Con-" + sub)
                     .deliverSubject("push." + sub)
+                    .deliverGroup("Grp-" + sub)
                     .build();
             jsm.addOrUpdateConsumer("Str-" + sub, cc);
         } catch (Exception e) {
@@ -139,6 +140,7 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
             PushSubscribeOptions so = PushSubscribeOptions.builder()
                     .stream("Str-" + sub)
                     .durable("Con-" + sub)
+                    .deliverGroup("Grp-" + sub)
                     .build();
 
             // AutoAck false
