@@ -1,6 +1,6 @@
 # NATS JetStream benchmarks
 
-This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/) using the [Java NATS client library](https://github.com/nats-io/nats.java). In order to run these benchmarks, you'll need to:
+This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/) using the [Java NATS client library](https://github.com/nats-io/nats.java). This benchmark tests at-least-once reliable messaging using NATS JetStream. In order to run these benchmarks, you'll need to:
 
 * [Create the necessary local artifacts](#creating-local-artifacts)
 * [Stand up a NATS cluster](#creating-a-nats-cluster-on-amazon-web-services-aws-using-terraform-and-ansible) on Amazon Web Services (which includes a client host for running the benchmarks)
@@ -68,10 +68,27 @@ Variable | Description | Default
 :--------|:------------|:-------
 `region` | The AWS region in which the NATS cluster and benchmark workers will be deployed | `us-west-2`
 `public_key_path` | The path to the SSH public key that you've generated | `~/.ssh/nats_aws.pub`
-`ami` | The [Amazon Machine Image](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) (AWI) to be used by the cluster's machines | [`ami-9fa343e7`](https://access.redhat.com/articles/3135091)
-`instance_types` | The EC2 instance types used by the various components | `i3.4xlarge` (NATS servers), `c4.8xlarge` (benchmarking client)
+`ami` | The [Amazon Machine Image](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) (AWI) to be used by the cluster's machines | `ami-0892d3c7ee96c0bf7` (Ubuntu 20.04 LTS)
+`instance_types` | The EC2 instance types used by the various components | `i3.large` (NATS servers), `m6i.large` (benchmarking client)
 
 > If you modify the `public_key_path`, make sure that you point to the appropriate SSH key path when running the [Ansible playbook](#running-the-ansible-playbook).
+
+Several NATS server configurable parameters in `natsoptions.yaml` are used by the Ansible playbook part of deployment.
+
+Variable | Description | Default
+:--------|:------------|:-------
+`archiveurl` | | Download URL for NATS Server version 2.6.6, Linux, AMD64
+`statemountpath` | | `/state`
+`statemounted` | | `true`
+`statemountsrc` | | `/dev/nvme0n1`
+`statefstype` | | `ext4`
+`maxmemorystore` | | 2 GB
+`maxfilestore` | | 410 GB
+`jsreplicas` | | `2`
+`purgepreviousstate` | | `true`
+
+> Variables like `statemountsrc` and `maxfilestore` will vary based on your selected EC2 instance type.
+
 
 ### Running the Ansible playbook
 
