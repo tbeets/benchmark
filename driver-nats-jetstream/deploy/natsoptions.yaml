@@ -20,15 +20,25 @@
 # Version and architecture of NATS Server
 archiveurl: "https://github.com/nats-io/nats-server/releases/download/v2.6.6/nats-server-v2.6.6-linux-amd64.zip"
 
-# JetStream storage
-# These settings must agree with instance_types for natsserver (terraform.tfvars)
+# Version and archirecture of the NATS CLI tool
+cliarchiveurl: "https://github.com/nats-io/natscli/releases/download/v0.0.28/nats-0.0.28-linux-amd64.zip"
 
+# JetStream Configuration
+# Note: These settings must agree with server instance types and number for natsserver (terraform.tfvars)
+
+# JetStream Consumer Mode
+# JS Consumer presenting as stream (=push)
+# JS Consumer presenting as service (=pull)
+jsconsumermode: push
+
+# JetStream storage
 statemountpath: /state
 
-# NOT IMPLEMENTED statemounted "false" means just use the root storage of the AMI type
-# statemounted "true" means need to format and mount external storage that is presented to the VM
+# statemounted "true" means need to format and mount external storage that is presented to the VM.
+# Note, "false" is not implemented.
 statemounted: true
 
+# device to format and mount and filesystem type
 statemountsrc: /dev/nvme0n1
 statefstype: ext4
 
@@ -40,8 +50,9 @@ maxfilestore: 440234147840
 
 # JetStream replication
 # Must be strictly <= num_instances for natsserver (terraform.tfvars)
+# Usually odd numbers (1,3,5,...) for quorum
 jsreplicas: 2
 
-# Remove any state in /state if true
+# Remove any state in /state on (re-)deployment
 purgepreviousstate: true
 

@@ -33,3 +33,5 @@ workers:
 natsHostUrl: nats://localhost:4222
 
 jsReplicas: 42
+
+jsConsumerMode: push
