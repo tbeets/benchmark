@@ -24,6 +24,10 @@
   vars_files:
     - natsoptions.yaml
   tasks:
+    - name: Stop NATS Server if present
+      systemd:
+        name: "nats-server"
+        state: stopped
     - name: Create list of mounted devices
       set_fact:
         mounted_devices: "{{ ansible_mounts|json_query('[].device') }}"
@@ -43,7 +47,7 @@
       file:
         state: absent
         path: /state/jetstream
-      when: purgepreviousstate == "true"
+      when: purgepreviousstate|default(false)|bool == true
     - name: Get seed NATS cluster node
       set_fact:
         natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
@@ -62,6 +66,22 @@
         src: "{{ archiveurl }}"
         remote_src: yes
         dest: /opt/nats
+        extra_opts:
+          - "-j"
+    - name: Install NATS CLI tool from tarball
+      unarchive:
+        src: "{{ cliarchiveurl }}"
+        remote_src: yes
+        dest: /opt/nats
+        extra_opts:
+          - "-j"
+    - name: Set NATS CLI contexts and default
+      become: false
+      shell:
+        "./nats ctx save --server nats://{{ ansible_facts['default_ipv4']['address'] }}:4222 --user System --password s3cr3t System; ./nats ctx save --server nats://{{ ansible_facts['default_ipv4']['address'] }}:4222 --user UserA --password s3cr3t UserA; ./nats ctx select System"
+      args:
+        chdir: /opt/nats
+        creates: "{{ ansible_env.HOME }}/.config/nats"
     - name: Provision NATS server configuration
       template:
         src: "templates/cluster.conf"
@@ -151,6 +171,11 @@
         dest: /opt/benchmark/driver-nats-jetstream/nats.yaml
         regexp: '^jsReplicas\: '
         line: "jsReplicas: {{ jsreplicas }}"
+    - name: Set JS Consumer Mode
+      lineinfile:
+        dest: /opt/benchmark/driver-nats-jetstream/nats.yaml
+        regexp: '^jsConsumerMode\: '
+        line: "jsConsumerMode: {{ jsconsumermode }}"
     - name: Configure JVM memory Benchmark Worker
       lineinfile:
         dest: /opt/benchmark/bin/benchmark-worker
