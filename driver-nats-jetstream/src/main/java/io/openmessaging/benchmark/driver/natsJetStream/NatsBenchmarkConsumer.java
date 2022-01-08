@@ -18,16 +18,44 @@
  */
 package io.openmessaging.benchmark.driver.natsJetStream;
 
-import io.nats.client.Connection;
-import io.nats.client.JetStream;
+import io.nats.client.*;
+
 import io.openmessaging.benchmark.driver.BenchmarkConsumer;
+import io.openmessaging.benchmark.driver.ConsumerCallback;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class NatsBenchmarkConsumer implements BenchmarkConsumer {
     // the con has-a dispatcher, the dispatcher has-a subscription
     private Connection con;
     private JetStream js;
+
+    private ExecutorService executor
+            = Executors.newSingleThreadExecutor();
+
+    public void startPolling(JetStreamSubscription jss,
+                              ConsumerCallback consumerCallback) {
+
+        executor.submit(() -> {
+            while (true) {
+                Iterator<Message> iter = jss.iterate(1000, Duration.ofSeconds(1));
+                while (iter.hasNext()) {
+                    Message m = iter.next();
+                    // process message
+                    consumerCallback.messageReceived(m.getData(), Long.parseLong(m.getHeaders().getFirst("pubstamp")));
+                    m.ack();
+                }
+            }
+        });
+
+        return;
+    }
 
     public NatsBenchmarkConsumer (Connection con, JetStream js) {
         this.con = con;
@@ -38,4 +66,8 @@ public class NatsBenchmarkConsumer implements BenchmarkConsumer {
         con.drain(Duration.ofSeconds(10));
         con.close();
     }
+
+
+    private static final Logger log = LoggerFactory.getLogger(NatsBenchmarkConsumer.class);
+
 }

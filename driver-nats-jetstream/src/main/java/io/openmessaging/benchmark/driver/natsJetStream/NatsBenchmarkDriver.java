@@ -74,18 +74,29 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
 
             con.flush(Duration.ZERO);
 
+            log.info("JetStream [" + "Str-" + sub + "] created");
         } catch (Exception e) {
             log.error("createTopic exception " + e);
             return null;
         }
 
         try {
-            ConsumerConfiguration cc = ConsumerConfiguration.builder()
-                    .durable("Con-" + sub)
-                    .deliverSubject("push." + sub)
-                    .deliverGroup("Grp-" + sub)
-                    .build();
+            ConsumerConfiguration.Builder b = ConsumerConfiguration.builder();
+
+            b.durable("Con-" + sub);
+            b.ackPolicy(AckPolicy.Explicit);
+            b.ackWait(Duration.ofSeconds(30));
+
+            if (config.jsConsumerMode.equalsIgnoreCase("push")) {
+                // Push JS Consumers present as a stream at a fixed subject
+                b.deliverSubject("push." + sub).deliverGroup("Grp-" + sub);
+            }
+
+            ConsumerConfiguration cc = b.build();
+
             jsm.addOrUpdateConsumer("Str-" + sub, cc);
+
+            log.info("JS Consumer [" + "Con-" + sub + "] created as [" + config.jsConsumerMode + "] mode");
         } catch (Exception e) {
             log.error("create JS consumer error" + e);
             return null;
@@ -117,11 +128,20 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
     @Override public CompletableFuture<BenchmarkConsumer> createConsumer(String sub, String subscriptionName,
         ConsumerCallback consumerCallback) {
 
+        if (config.jsConsumerMode.equalsIgnoreCase("push")) {
+            return createPushConsumer(sub, subscriptionName, consumerCallback);
+        } else { // "pull"
+            return createPullConsumer(sub, subscriptionName, consumerCallback);
+        }
+    }
+
+    CompletableFuture<BenchmarkConsumer> createPushConsumer(String sub, String subscriptionName,
+                                                            ConsumerCallback consumerCallback) {
         Connection con;
         JetStream js;
         Dispatcher conDispatcher;
 
-        log.info("createConsumer");
+        log.info("createConsumer (push)");
         log.info("topic param: " + sub);
         log.info("subscriptionName param: " + subscriptionName);
 
@@ -146,7 +166,6 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
             // AutoAck false
             js.subscribe(sub, conDispatcher, mh, false, so);
 
-            con.flush(Duration.ZERO);
         } catch (Exception e) {
             log.error("createConsumer exception " + e);
             return null;
@@ -154,6 +173,41 @@ public class NatsBenchmarkDriver implements BenchmarkDriver {
         log.info("createConsumer done");
         return CompletableFuture.completedFuture(new NatsBenchmarkConsumer(con, js));
     }
+
+    CompletableFuture<BenchmarkConsumer> createPullConsumer(String sub, String subscriptionName,
+                                                            ConsumerCallback consumerCallback) {
+        Connection con;
+        JetStream js;
+        NatsBenchmarkConsumer nbc;
+
+        log.info("createConsumer (pull)");
+        log.info("topic param: " + sub);
+        log.info("subscriptionName param: " + subscriptionName);
+
+        try {
+            con = Nats.connect(normalizedOptions());
+            js = con.jetStream();
+            nbc = new NatsBenchmarkConsumer(con, js);
+
+            PullSubscribeOptions so = PullSubscribeOptions.builder()
+                    .stream("Str-" + sub)
+                    .durable("Con-" + sub)
+                    .build();
+
+            JetStreamSubscription jss = js.subscribe(sub, so);
+
+            nbc.startPolling(jss, consumerCallback);
+
+        } catch (Exception e) {
+            log.error("createConsumer exception " + e);
+            return null;
+        }
+        log.info("createConsumer done");
+
+        return CompletableFuture.completedFuture(nbc);
+    }
+
+
 
     @Override public void close() throws Exception {
         // TODO: Cleanup file-based JetStreams and JS Consumers
