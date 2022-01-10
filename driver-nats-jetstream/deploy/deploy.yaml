@@ -17,6 +17,28 @@
 # under the License.
 #
 
+- name: Common Facts
+  hosts: natsserver:natsclient
+  vars:
+    natsurl_list: []
+  tasks:
+    - name: Collect NATS listener URLs
+      set_fact:
+        natsurl_item: "nats://{{ hostvars[item].private_ip }}:4222"
+      with_items: "{{ groups['natsserver'] }}"
+      register: natsurls
+    - name: Build NATS listener URL List
+      set_fact:
+        natsurl_list: "{{ natsurls.results | map(attribute='ansible_facts.natsurl_item') | list }}"
+    - debug: var=natsurl_list
+    - name: Set NATS listener URL Seed List
+      set_fact:
+        natsurls_delimited: "{{ natsurl_list | join(',') }}"
+        cacheable: yes
+    - name: Set the cluster lead NATS server
+      set_fact:
+        natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
+        cacheable: yes
 
 - name: Install NATS cluster
   hosts: natsserver
@@ -28,6 +50,7 @@
       systemd:
         name: "nats-server"
         state: stopped
+      ignore_errors: true
     - name: Create list of mounted devices
       set_fact:
         mounted_devices: "{{ ansible_mounts|json_query('[].device') }}"
@@ -48,9 +71,6 @@
         state: absent
         path: /state/jetstream
       when: purgepreviousstate|default(false)|bool == true
-    - name: Get seed NATS cluster node
-      set_fact:
-        natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
     - name: Install utility packages
       apt:
         pkg:
@@ -126,7 +146,6 @@
         daemon_reload: yes
         name: "nats-server"
 
-
 - name:  benchmarking client setup
   hosts: natsclient
   connection: ssh
@@ -134,9 +153,12 @@
   vars_files:
     - natsoptions.yaml
   tasks:
-    - name: Set the seed NATS server
-      set_fact:
-        natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
+    - name: Install utility packages
+      apt:
+        pkg:
+          - wget
+          - unzip
+        update_cache: yes
     - name: Install java
       apt:
         name: openjdk-11-jre-headless
@@ -157,6 +179,20 @@
       template:
         src: "templates/workers.yaml"
         dest: "/opt/benchmark/workers.yaml"
+    - name: Install NATS CLI tool from tarball
+      unarchive:
+        src: "{{ cliarchiveurl }}"
+        remote_src: yes
+        dest: /opt/benchmark
+        extra_opts:
+          - "-j"
+    - name: Set NATS CLI contexts and default
+      become: false
+      shell:
+        "./nats ctx save --server={{ansible_facts.natsurls_delimited}} --user System --password s3cr3t System; ./nats ctx save --server={{ansible_facts.natsurls_delimited}} --user UserA --password s3cr3t UserA; ./nats ctx select System"
+      args:
+        chdir: /opt/benchmark
+        creates: "{{ ansible_env.HOME }}/.config/nats"
     - name: Provision NATS worker configuration
       template:
         src: "templates/nats.yaml"
