@@ -1,4 +1,4 @@
-# NATS JetStream benchmarks
+``# NATS JetStream benchmarks
 
 This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/) using the [Java NATS client library](https://github.com/nats-io/nats.java). This benchmark tests at-least-once reliable messaging using NATS JetStream. In order to run these benchmarks, you'll need to:
 
@@ -124,4 +124,37 @@ You can also run specific workloads in the `workloads` folder. Here's an example
 
 ```bash
 $ sudo bin/benchmark --drivers driver-nats-jetstream/nats.yaml workloads/1-topic-16-partitions-1kb.yaml
+```
+
+You may compare the OpenMessaging benchmark above with NATS CLI built-in "bench" utility which leverages the NATS Go client library:
+
+```bash
+# On natsclient hosts, manually execute...
+cd /opt/benchmark
+
+# Change sub, pub, size, and replicas parameters for desired comparison
+
+# NATS core (w/o JetStream QoS)
+./nats --context UserA bench --sub=1 --size=1024 --msgs 10000000 foo
+./nats --context UserA bench --pub=1 --size=1024 --msgs 10000000 foo
+
+# NATS JetStream with Push JS Consumer
+./nats --context UserA bench --sub=1 --size=1024 --msgs 10000000 --js --storage="file" --replicas=2 foojs
+./nats --context UserA bench --pub=1 --size=1024 --msgs 10000000 --js --storage="file" --replicas=2 foojs
+
+# NATS JetStream with Pull JS Consumer
+./nats --context UserA bench --sub=1 --size=1024 --msgs 10000000 --js --storage="file" --replicas=2 --pull foojs
+./nats --context UserA bench --pub=1 --size=1024 --msgs 10000000 --js --storage="file" --replicas=2 --pull foojs
+```
+
+```bash
+# On natsclient hosts, manually execute...
+cd /opt/benchmark
+
+# Replace 10.0.0.181 below with desired natsserver for NatsAutoBench to connect 
+
+java -classpath lib/io.openmessaging.benchmark-driver-nats-jetstream-0.0.1-SNAPSHOT.jar:lib/io.nats-jnats-2.13.1.jar \
+examples.autobench.NatsAutoBench nats://UserA:s3cr3t@10.0.0.181:4222 jsFile jsPubAsync
+
+
 ```
