@@ -17,19 +17,25 @@
 # under the License.
 #
 
-- import_playbook: deploycommon.yaml
-
-- import_playbook: deployserver.yaml
-
-- import_playbook: deployclient.yaml
-
-- name: Configured Hosts
-  hosts: localhost
-  become: false
+- name: Common Facts
+  hosts: natsserver:natsclient
+  vars:
+    natsurl_list: []
   tasks:
-    - debug:
-        msg: "nats servers {{ item }}"
+    - name: Collect NATS listener URLs
+      set_fact:
+        natsurl_item: "nats://{{ hostvars[item].private_ip }}:4222"
       with_items: "{{ groups['natsserver'] }}"
-    - debug:
-        msg: "Benchmark client {{ item }}"
-      with_items: "{{ groups['natsclient'] }}"
+      register: natsurls
+    - name: Build NATS listener URL List
+      set_fact:
+        natsurl_list: "{{ natsurls.results | map(attribute='ansible_facts.natsurl_item') | list }}"
+    - debug: var=natsurl_list
+    - name: Set NATS listener URL Seed List
+      set_fact:
+        natsurls_delimited: "{{ natsurl_list | join(',') }}"
+        cacheable: yes
+    - name: Set the cluster lead NATS server
+      set_fact:
+        natsClusterIp: "{{ hostvars[groups['natsserver'][0]].private_ip }}"
+        cacheable: yes
