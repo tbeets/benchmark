@@ -62,7 +62,6 @@
 					<header>dev/license-header.txt</header>
 
 					<excludes>
-						<exclude>**/examples/**</exclude>
 						<exclude>LICENSE</exclude>
 						<exclude>NOTICE</exclude>
 						<exclude>payload/**</exclude>
