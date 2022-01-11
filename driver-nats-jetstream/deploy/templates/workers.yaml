@@ -17,7 +17,9 @@
 # under the License.
 #
 
+# Following value populated from Ansible inventory
 
+# List of benchmark workers (NATS clients):
 workers:
 {% for worker in groups['natsclient'] %}
   - http://{{ hostvars[worker].private_ip }}:8080

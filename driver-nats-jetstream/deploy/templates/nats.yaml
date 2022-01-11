@@ -21,17 +21,17 @@
 name: Nats
 driverClass: io.openmessaging.benchmark.driver.natsJetStream.NatsBenchmarkDriver
 
-# NATS specific configurations
+# These values will be set from respective settings in natsoptions.yaml or Ansible inventory
 
+# List of NATS Servers in cluster:
 workers:
 {% for worker in groups['natsserver'] %}
   - nats://{{ hostvars[worker].private_ip }}:4222
 {% endfor %}
 
-# Add some parms and values here to pick up in code
-
+# The first-of-N NATS Servers in cluster if needed:
 natsHostUrl: nats://localhost:4222
 
+# When creating "Topics" for benchmark need these settings:
 jsReplicas: 42
-
 jsConsumerMode: push
