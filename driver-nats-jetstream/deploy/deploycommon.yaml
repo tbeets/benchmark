@@ -22,6 +22,16 @@
   vars:
     natsurl_list: []
   tasks:
+    - name: Install NTP
+      apt:
+        pkg:
+          - ntp
+        update_cache: yes
+    - name: Restart NTP
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        name: "ntp"
     - name: Collect NATS listener URLs
       set_fact:
         natsurl_item: "nats://{{ hostvars[item].private_ip }}:4222"
