@@ -1,4 +1,4 @@
-``# NATS JetStream benchmarks
+# NATS JetStream benchmarks
 
 This folder houses all of the assets necessary to run benchmarks for [NATS](https://nats.io/) using the [Java NATS client library](https://github.com/nats-io/nats.java). This benchmark tests at-least-once reliable messaging using NATS JetStream. In order to run these benchmarks, you'll need to:
 
@@ -77,15 +77,16 @@ Several NATS server configurable parameters in `natsoptions.yaml` are used by th
 
 Variable | Description | Default
 :--------|:------------|:-------
-`archiveurl` | | Download URL for NATS Server version 2.6.6, Linux, AMD64
-`statemountpath` | | `/state`
-`statemounted` | | `true`
-`statemountsrc` | | `/dev/nvme0n1`
-`statefstype` | | `ext4`
-`maxmemorystore` | | 2 GB
-`maxfilestore` | | 410 GB
-`jsreplicas` | | `2`
-`purgepreviousstate` | | `true`
+`archiveurl` | NATS Server version and architecture to install | Download URL for NATS Server version 2.6.6, Linux, AMD64
+`cliarchiveurl` | NATS CLI utility version and arhitecture to install | Download URL for NATS CLI utility version 0.28, Linux, AMD64
+`statemountpath` | The filesystem location the NATS Server will save `jetstream` state | `/state`
+`statemounted` | Based on EC2 image type, whether JS state needs to be mounted | `true` (note: only `true` supported)
+`statemountsrc` | Based on EC2 image type, name of storage device to mount | `/dev/nvme0n1`
+`statefstype` | Filesystem type desired for JS storage device | `ext4`
+`maxmemorystore` | Maximum memory that may be used for JS in-memory streams | 2 GB
+`maxfilestore` | Maximum disk that may be used for JS file streams | 410 GB
+`jsreplicas` | The number of state replicas required by the JS streams | `2`
+`purgepreviousstate` | If statemountpath exists, whether to delete any existing files there | `true`
 
 > Variables like `statemountsrc` and `maxfilestore` will vary based on your selected EC2 instance type.
 
@@ -145,16 +146,4 @@ cd /opt/benchmark
 # NATS JetStream with Pull JS Consumer
 ./nats --context UserA bench --sub=1 --size=1024 --msgs 10000000 --js --storage="file" --replicas=2 --pull foojs
 ./nats --context UserA bench --pub=1 --size=1024 --msgs 10000000 --js --storage="file" --replicas=2 --pull foojs
-```
-
-```bash
-# On natsclient hosts, manually execute...
-cd /opt/benchmark
-
-# Replace 10.0.0.181 below with desired natsserver for NatsAutoBench to connect 
-
-java -classpath lib/io.openmessaging.benchmark-driver-nats-jetstream-0.0.1-SNAPSHOT.jar:lib/io.nats-jnats-2.13.1.jar \
-examples.autobench.NatsAutoBench nats://UserA:s3cr3t@10.0.0.181:4222 jsFile jsPubAsync
-
-
 ```
