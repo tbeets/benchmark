@@ -51,10 +51,13 @@ public class NatsBenchmarkProducer implements BenchmarkProducer {
 
         // The benchmark wants a CompletableFuture<Void>, but NATS JS async idiom is CompletableFuture<PublishAck>
 
+        // The "key" here is a partition key, which we ignore...
+
         CompletableFuture<Void> voidFuture = new CompletableFuture<Void>();
 
+        //
         Headers hs = new Headers();
-        hs.add("pubstamp", Long.toString(System.currentTimeMillis()));
+        hs.add("pubstamp", Long.toString(System.nanoTime()));
 
         Message msg = NatsMessage.builder()
                 .subject(sub)
