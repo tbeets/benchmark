@@ -1,24 +1,36 @@
 # Resource Scenarios for Benchmarking
 
-Note: JS persistence is _file_, explicit client ack, and replicas=#servers unless otherwise remarked
+Notes:
+* JS persistence is _file_
+* explicit client ack
+* replicas=#servers unless otherwise remarked
+* "k" is 1024 and "M" is 1024x1024
+* Pub and Sub rates are rounded to nearest MB
+* NATS Server 2.6.6 unless otherwise remarked
+* nats.java 2.13.1 unless otherwise remarked
+* NATS CLI 0.28 (nats.go 1.13.0) unless otherwise remarked
+* NATS CLI runs of 10M messages for 1kB and 4kB message size, 1M messages for 64kB message size
 
-Scenario | Description | Server (natsserver) | Client (natsclient) | # Producer | # Consumer | Pub /s | Sub /s |
+Scenario | pubs-subs-topics-msgsize-type | Server (natsserver) | Client (natsclient) | # Producer | # Consumer | Pub MB/s | Sub MB/s |
 :--------|:------------|:-----------|:-----------|:---------|:---------|:---------|:---------
-1 | 1-1-benchmark-1kB-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 15 MB | 15 MB |
-1.1 | 1-1-benchmark-1kB-core (driver-nats-core) | 2x i3.large | 3x m6i.large | 1 | 1 |  |  |
-1.2 | 1-1-clibench-1kB-core | 2x i3.large | 3x m6i.large | 1 | 1 | 300 MB  | 300 MB |
-1.3 | 1-1-clibench-1kB-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 29 MB  | 29 MB |
-1.4 | 1-1-clibench-1kB-jspull | 2x i3.large | 3x m6i.large | 1 | 1 | 15 MB  | 15 MB |
-2 | 1-1-benchmark-4kB-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 15 MB | 15 MB |
-2.1 | 1-1-benchmark-4kB-core (driver-nats-core) | 2x i3.large | 3x m6i.large | 1 | 1 |  |  |
-2.2 | 1-1-clibench-4kB-core | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
-2.3 | 1-1-clibench-4kB-jspush | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
-2.4 | 1-1-clibench-4kB-jspull | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
-3 | 1-1-benchmark-64kB-jspush | 2x i3.large | 3x m6i.large | 1 | 1 |  |  |
-3.1 | 1-1-benchmark-64kB-core (driver-nats-core) | 2x i3.large | 3x m6i.large | 1 | 1 |  |  |
-3.2 | 1-1-clibench-64kB-core | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
-3.3 | 1-1-clibench-64kB-jspush | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
-3.4 | 1-1-clibench-64kB-jspull | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
+1 | 1-1-1-1kB-benchmark-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 15 | 15 |
+1.1 | 1-1-1-1kB-benchmark-nonjs (driver-nats-core) | 2x i3.large | 3x m6i.large | 1 | 1 |  |  |
+1.2 | 1-1-1-1kB-clibench-nonjs | 2x i3.large | 3x m6i.large | 1 | 1 | 300 | 300 |
+1.3 | 1-1-1-1kB-clibench-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 29 | 29 |
+1.4 | 1-1-1-1kB-clibench-jspull | 2x i3.large | 3x m6i.large | 1 | 1 | 15 | 15 |
+2 | 1-1-1-4kB-benchmark-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 40  | 40 |
+2.1 | 1-1-1-4kB-benchmark-nonjs (driver-nats-core) | 2x i3.large | 3x m6i.large | 1 | 1 |  |  |
+2.2 | 1-1-1-4kB-clibench-nonjs | 2x i3.large | 3x m6i.large | 1 | 1 | 390 | 390 |
+2.3 | 1-1-1-4kB-clibench-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 50 | 50 |
+2.4 | 1-1-1-4kB-clibench-jspull | 2x i3.large | 3x m6i.large | 1 | 1 | 37 | 37 |
+3 | 1-1-1-64kB-benchmark-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 47 | 47 |
+3.1 | 1-1-1-64kB-benchmark-nonjs (driver-nats-core) | 2x i3.large | 3x m6i.large | 1 | 1 |  |  |
+3.2 | 1-1-1-64kB-clibench-nonjs | 2x i3.large | 3x m6i.large | 1 | 1 | 336 | 324 |
+3.3 | 1-1-1-64kB-clibench-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | 78  | 60 |
+3.4 | 1-1-1-64kB-clibench-jspull | 2x i3.large | 3x m6i.large | 1 | 1 | 86  | 86 |
+4 | 3-3-3-1kB-benchmark-jspush | 2x i3.large | 3x m6i.large | 1 | 1 | |  |
+4.1 | 3-3-3-4kB-benchmark-jspush | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
+4.2 | 3-3-3-64kB-benchmark-jspush | 2x i3.large | 3x m6i.large | 1 | 1 |   |  |
 
 # Infrastructure
 
